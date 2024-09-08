@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
+    <title>Login Page</title>
     <style>
-        /* CSS básico para centrar el formulario y darle mejor presentación */
         body {
             font-family: Arial, sans-serif;
             display: flex;
@@ -53,11 +52,19 @@
         a:hover {
             color: #45a049;
         }
+
+        /* Mensaje de error */
+        .error {
+            color: red;
+            font-size: 14px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
-    <h1>Login</h1>
     <form action="/login" method="post">
+        <h1>Login</h1>
+        
         <!-- Campo para el nombre de usuario -->
         <label for="username">Username:</label>
         <input type="text" id="username" name="username" required>
@@ -68,16 +75,15 @@
 
         <!-- Botón de envío -->
         <button type="submit">Login</button>
-    </form>
 
-    <!-- Enlace a la página de registro -->
-    <p><a href="/register">Register</a></p>
-    <br>
-    <br>
-    <div class="button-container"></div>
-        <a href="../index">Back to Menu</a>
-    </div>
-    <br>
+        <!-- Mensaje de error (si existe) -->
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+        
+        <!-- Enlace a la página de registro -->
+        <p><a href="/register">Register</a></p>
+    </form>
 </body>
 </html>
 
