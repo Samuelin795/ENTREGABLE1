@@ -1,31 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, session
-import mysql.connector
-from dotenv import load_dotenv
-from urllib.parse import urlparse
-import os
-
-# Cargar las variables de entorno del archivo .env
-load_dotenv(dotenv_path='C:/Users/ESTUDIANTE/Desktop/ENTREGABLE1/web/.env')
+from db import get_db_connection
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'  # Cambia esta clave por una clave secreta
-
-# Obtener la URL de conexión desde las variables de entorno
-mysql_url = os.getenv('MYSQL_URL')
-
-# Desglosar la URL de conexión
-parsed_url = urlparse(mysql_url)
-db_config = {
-    'host': parsed_url.hostname,
-    'port': parsed_url.port,
-    'user': parsed_url.username,
-    'password': parsed_url.password,
-    'database': parsed_url.path[1:]  # quitar el primer carácter '/' del nombre de la base de datos
-}
-
-def get_db_connection():
-    connection = mysql.connector.connect(**db_config)
-    return connection
 
 @app.route('/')
 def home():
@@ -35,53 +12,57 @@ def home():
 
 @app.route('/login', methods=['POST'])
 def login():
-    username = request.form['username']
-    password = request.form['password']
-    
-    connection = get_db_connection()
-    cursor = connection.cursor(dictionary=True)
-    
-    query = "SELECT * FROM users WHERE username = %s AND password = %s"
-    cursor.execute(query, (username, password))
-    user = cursor.fetchone()
-    
-    cursor.close()
-    connection.close()
-    
-    if user:
-        session['username'] = user['username']
-        return redirect(url_for('welcome'))
-    else:
-        return "Invalid credentials"
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
+    try:
         username = request.form['username']
         password = request.form['password']
         
         connection = get_db_connection()
-        cursor = connection.cursor()
+        cursor = connection.cursor(dictionary=True)
         
-        # Comprobar si el nombre de usuario ya existe
-        cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
-        existing_user = cursor.fetchone()
-        
-        if existing_user:
-            cursor.close()
-            connection.close()
-            return "Username already exists"
-
-        # Insertar el nuevo usuario
-        cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, password))
-        connection.commit()
+        query = "SELECT * FROM users WHERE username = %s AND password = %s"
+        cursor.execute(query, (username, password))
+        user = cursor.fetchone()
         
         cursor.close()
         connection.close()
         
-        return redirect(url_for('home'))
+        if user:
+            session['username'] = user['username']
+            return redirect(url_for('welcome'))
+        else:
+            return "Invalid credentials"
+    except Exception as e:
+        return f"An error occurred: {str(e)}"
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    try:
+        if request.method == 'POST':
+            username = request.form['username']
+            password = request.form['password']
+            
+            connection = get_db_connection()
+            cursor = connection.cursor()
+            
+            cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+            existing_user = cursor.fetchone()
+            
+            if existing_user:
+                cursor.close()
+                connection.close()
+                return "Username already exists"
     
-    return render_template('register.html')
+            cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, password))
+            connection.commit()
+            
+            cursor.close()
+            connection.close()
+            
+            return redirect(url_for('home'))
+        
+        return render_template('register.html')
+    except Exception as e:
+        return f"An error occurred: {str(e)}"
 
 @app.route('/welcome')
 def welcome():
@@ -93,6 +74,11 @@ def welcome():
 def logout():
     session.pop('username', None)
     return redirect(url_for('home'))
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    # Puedes agregar lógica para registrar el error o mostrar una página de error personalizada
+    return f"An unexpected error occurred: {str(e)}", 500
 
 if __name__ == "__main__":
     app.run(debug=True)
